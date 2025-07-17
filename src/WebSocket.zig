@@ -116,3 +116,7 @@ pub fn getRemoteAddressAsText(self: *const WebSocket) []const u8 {
     const len = c.uws_ws_get_remote_address_as_text(self.ptr, &temp);
     return temp[0..len];
 }
+
+pub fn getUserData(self: *const WebSocket) *?*anyopaque {
+    return @alignCast(@ptrCast(c.uws_ws_get_user_data(self.ptr)));
+}

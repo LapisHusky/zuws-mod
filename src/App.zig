@@ -170,7 +170,7 @@ fn handlerWrapper(handler: MethodHandler) fn (rs: ?*c.uws_res_s, rq: ?*c.uws_req
     }.handlerWrapper;
 }
 
-pub const UpgradeHandler = *const fn (*Response, *Request) void;
+pub const UpgradeHandler = *const fn (*Response, *Request, ?*c.uws_socket_context_t) void;
 pub const OpenHandler = *const fn (ws: *WebSocket) void;
 pub const MessageHandler = *const fn (ws: *WebSocket, message: []const u8, opcode: WebSocket.Opcode) void;
 pub const DrainHandler = *const fn (ws: *WebSocket) void;
@@ -209,8 +209,7 @@ fn upgradeWrapper(handler: UpgradeHandler) fn (
         fn upgradeHandler(rs: ?*c.uws_res_s, rq: ?*c.uws_req_t, context: ?*c.uws_socket_context_t) callconv(.c) void {
             var res = Response{ .ptr = rs orelse return };
             var req = Request{ .ptr = rq orelse return };
-            handler(&res, &req);
-            res.upgrade(&req, context);
+            handler(&res, &req, context);
         }
     }.upgradeHandler;
 }

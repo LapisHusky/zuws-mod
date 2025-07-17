@@ -218,6 +218,7 @@ uws_app_t *uws_create_app();
     unsigned int uws_ws_get_buffered_amount(uws_websocket_t *ws);
     size_t uws_ws_get_remote_address(uws_websocket_t *ws, const char **dest);
     size_t uws_ws_get_remote_address_as_text(uws_websocket_t *ws, const char **dest);
+    void * uws_ws_get_user_data(uws_websocket_t *ws);
 
 #pragma endregion
 

@@ -167,6 +167,7 @@ pub fn onData(self: *const Response, handler: c.uws_res_on_data_handler) void {
 pub fn upgrade(
     self: *const Response,
     req: *const Request,
+    userdata: ?*anyopaque,
     ws: ?*c.uws_socket_context_t,
 ) void {
     var ws_key: [*c]const u8 = undefined;
@@ -178,7 +179,7 @@ pub fn upgrade(
 
     c.uws_res_upgrade(
         self.ptr,
-        null,
+        userdata,
         ws_key,
         ws_key_len,
         ws_protocol,

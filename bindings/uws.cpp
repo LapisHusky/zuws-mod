@@ -436,6 +436,12 @@ size_t uws_ws_get_remote_address_as_text(uws_websocket_t *ws, const char **dest)
     return value.length();
 }
 
+void * uws_ws_get_user_data(uws_websocket_t *ws)
+{
+    uWS::WebSocket<IS_SSL, true, void *> *uws = (uWS::WebSocket<IS_SSL, true, void *> *)ws;
+    return uws->getUserData();
+}
+
 #pragma endregion
 
 void uws_loop_defer(us_loop_t *loop, void(cb()))
