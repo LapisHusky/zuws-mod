@@ -89,15 +89,15 @@ pub const StatusCode = enum(u16) {
     }
 };
 
-pub fn close(self: *const Response) void {
+pub fn close(self: Response) void {
     c.uws_res_close(self.ptr);
 }
 
-pub fn end(self: *const Response, data: []const u8, close_connection: bool) void {
+pub fn end(self: Response, data: []const u8, close_connection: bool) void {
     c.uws_res_end(self.ptr, data.ptr, data.len, close_connection);
 }
 
-pub fn cork(self: *const Response, callback: fn (Response) void) void {
+pub fn cork(self: Response, callback: fn (Response) void) void {
     const callbackWrapper = struct {
         fn cW(uws_res: ?*const c.uws_res_t) callconv(.c) void {
             callback(Response{ .ptr = @constCast(uws_res) orelse return });
@@ -106,67 +106,67 @@ pub fn cork(self: *const Response, callback: fn (Response) void) void {
     c.uws_res_cork(self.ptr, callbackWrapper);
 }
 
-pub fn pause(self: *const Response) void {
+pub fn pause(self: Response) void {
     c.uws_res_pause(self.ptr);
 }
 
-pub fn restart(self: *const Response) void {
+pub fn restart(self: Response) void {
     c.uws_res_resume(self.ptr);
 }
 
-pub fn writeContinue(self: *const Response) void {
+pub fn writeContinue(self: Response) void {
     c.uws_res_write_continue(self.ptr);
 }
 
-pub fn writeStatus(self: *const Response, status: []const u8) void {
+pub fn writeStatus(self: Response, status: []const u8) void {
     c.uws_res_write_status(self.ptr, status.ptr, status.len);
 }
 
-pub fn writeStatusCode(self: *const Response, comptime status: StatusCode) void {
+pub fn writeStatusCode(self: Response, comptime status: StatusCode) void {
     const status_text = comptime status.toString();
     self.writeStatus(status_text);
 }
 
-pub fn writeHeader(self: *const Response, key: []const u8, value: []const u8) void {
+pub fn writeHeader(self: Response, key: []const u8, value: []const u8) void {
     c.uws_res_write_header(self.ptr, key.ptr, key.len, value.ptr, value.len);
 }
 
-pub fn writeHeaderInt(self: *const Response, key: []const u8, value: u64) void {
+pub fn writeHeaderInt(self: Response, key: []const u8, value: u64) void {
     c.uws_res_write_header_int(self.ptr, key.ptr, key.len, value);
 }
 
-pub fn endWithoutBody(self: *const Response, close_connection: bool) void {
+pub fn endWithoutBody(self: Response, close_connection: bool) void {
     c.uws_res_end_without_body(self.ptr, close_connection);
 }
 
-pub fn write(self: *const Response, data: []const u8) bool {
+pub fn write(self: Response, data: []const u8) bool {
     return c.uws_res_write(self.ptr, data.ptr, data.len);
 }
 
-pub fn overrideWriteOffset(self: *const Response, offset: u64) void {
+pub fn overrideWriteOffset(self: Response, offset: u64) void {
     c.uws_res_override_write_offset(self.ptr, offset);
 }
 
-pub fn hasResponded(self: *const Response) bool {
+pub fn hasResponded(self: Response) bool {
     return c.uws_res_has_responded(self.ptr);
 }
 
 // TODO: Look into implementing wrappers for these
-pub fn onWritable(self: *const Response, handler: c.uws_res_on_writable_handler) void {
+pub fn onWritable(self: Response, handler: c.uws_res_on_writable_handler) void {
     c.uws_res_on_writable(self.ptr, handler);
 }
 
-pub fn onAborted(self: *const Response, handler: c.uws_res_on_aborted_handler) void {
+pub fn onAborted(self: Response, handler: c.uws_res_on_aborted_handler) void {
     c.uws_res_on_aborted(self.ptr, handler);
 }
 
-pub fn onData(self: *const Response, handler: c.uws_res_on_data_handler) void {
+pub fn onData(self: Response, handler: c.uws_res_on_data_handler) void {
     c.uws_res_on_data(self.ptr, handler);
 }
 
 pub fn upgrade(
-    self: *const Response,
-    req: *const Request,
+    self: Response,
+    req: Request,
     userdata: ?*anyopaque,
     ws: ?*c.uws_socket_context_t,
 ) void {
@@ -190,21 +190,21 @@ pub fn upgrade(
     );
 }
 
-pub fn tryEnd(self: *const Response, data: []const u8, totalSize: u64, close_connection: bool) c.uws_try_end_result_t {
+pub fn tryEnd(self: Response, data: []const u8, totalSize: u64, close_connection: bool) c.uws_try_end_result_t {
     return c.uws_res_try_end(self.ptr, data.ptr, data.len, totalSize, close_connection);
 }
 
-pub fn getWriteOffset(self: *const Response) u64 {
+pub fn getWriteOffset(self: Response) u64 {
     return c.uws_res_get_write_offset(self.ptr);
 }
 
-pub fn getRemoteAddress(self: *const Response) []const u8 {
+pub fn getRemoteAddress(self: Response) []const u8 {
     var temp: [*c]const u8 = undefined;
     const len = c.uws_res_get_remote_address(self.ptr, &temp);
     return temp[0..len];
 }
 
-pub fn getRemoteAddressAsText(self: *const Response) []const u8 {
+pub fn getRemoteAddressAsText(self: Response) []const u8 {
     var temp: [*c]const u8 = undefined;
     const len = c.uws_res_get_remote_address_as_text(self.ptr, &temp);
     return temp[0..len];

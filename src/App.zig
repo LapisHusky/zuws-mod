@@ -13,7 +13,7 @@ const App = @This();
 
 pub const Group = @import("./Group.zig");
 
-pub const MethodHandler = *const fn (*Response, *Request) void;
+pub const MethodHandler = *const fn (Response, Request) void;
 pub const ListenHandler = *const fn (?*ListenSocket) void;
 
 pub const ListenSocket = struct {
@@ -49,19 +49,19 @@ fn initNoSSL() !App {
     return error.CouldNotCreateApp;
 }
 
-pub fn deinit(self: *const App) void {
+pub fn deinit(self: App) void {
     c.uws_app_destroy(self.ptr);
 }
 
-pub fn listen(self: *const App, port: u16, comptime handler: ?ListenHandler) void {
+pub fn listen(self: App, port: u16, comptime handler: ?ListenHandler) void {
     c.uws_app_listen(self.ptr, port, if (handler) |h| listenWrapper(h) else null);
 }
 
-pub fn run(self: *const App) void {
+pub fn run(self: App) void {
     c.uws_app_run(self.ptr);
 }
 
-pub fn close(self: *const App) void {
+pub fn close(self: App) void {
     c.uws_app_close(self.ptr);
 }
 
@@ -87,7 +87,7 @@ pub const rawConnect = CreateRawMethodFn(.CONNECT);
 pub const rawTrace = CreateRawMethodFn(.TRACE);
 pub const rawAny = CreateRawMethodFn(.ANY);
 
-pub fn group(self: *const App, g: *Group.Group) !void {
+pub fn group(self: App, g: *Group.Group) !void {
     for (g.list.items) |item| {
         const pattern = try std.mem.concatWithSentinel(g.alloc, u8, &.{ g.base_path, item.pattern }, 0);
         switch (item.method) {
@@ -105,7 +105,7 @@ pub fn group(self: *const App, g: *Group.Group) !void {
     }
 }
 
-pub inline fn comptimeGroup(self: *const App, g: *const Group.ComptimeGroup) void {
+pub inline fn comptimeGroup(self: App, g: *const Group.ComptimeGroup) void {
     inline for (g.list) |item| {
         switch (item.method) {
             .GET => _ = self.get(g.base_path ++ item.pattern, item.handler),
@@ -122,7 +122,7 @@ pub inline fn comptimeGroup(self: *const App, g: *const Group.ComptimeGroup) voi
     }
 }
 
-pub fn ws(self: *const App, pattern: [:0]const u8, comptime behavior: WebSocketBehavior) *const App {
+pub fn ws(self: App, pattern: [:0]const u8, comptime behavior: WebSocketBehavior) App {
     if (config.debug_logs) {
         info("Registering WebSocket route: {s}", .{pattern});
     }
@@ -163,20 +163,20 @@ fn listenWrapper(handler: ListenHandler) fn (socket: ?*c.us_listen_socket_t) cal
 fn handlerWrapper(handler: MethodHandler) fn (rs: ?*c.uws_res_s, rq: ?*c.uws_req_s) callconv(.c) void {
     return struct {
         fn handlerWrapper(rs: ?*c.uws_res_s, rq: ?*c.uws_req_s) callconv(.c) void {
-            var res = Response{ .ptr = rs orelse return };
-            var req = Request{ .ptr = rq orelse return };
-            handler(&res, &req);
+            const res = Response{ .ptr = rs orelse return };
+            const req = Request{ .ptr = rq orelse return };
+            handler(res, req);
         }
     }.handlerWrapper;
 }
 
-pub const UpgradeHandler = *const fn (*Response, *Request, ?*c.uws_socket_context_t) void;
-pub const OpenHandler = *const fn (ws: *WebSocket) void;
-pub const MessageHandler = *const fn (ws: *WebSocket, message: []const u8, opcode: WebSocket.Opcode) void;
-pub const DrainHandler = *const fn (ws: *WebSocket) void;
-pub const PingPongHandler = *const fn (ws: *WebSocket, message: []const u8) void;
-pub const CloseHandler = *const fn (ws: *WebSocket, code: i32, message: ?[]const u8) void;
-pub const SubscriptionHandler = *const fn (ws: *WebSocket, topic: []const u8, new_sub_num: i32, old_sub_num: i32) void;
+pub const UpgradeHandler = *const fn (Response, Request, ?*c.uws_socket_context_t) void;
+pub const OpenHandler = *const fn (ws: WebSocket) void;
+pub const MessageHandler = *const fn (ws: WebSocket, message: []const u8, opcode: WebSocket.Opcode) void;
+pub const DrainHandler = *const fn (ws: WebSocket) void;
+pub const PingPongHandler = *const fn (ws: WebSocket, message: []const u8) void;
+pub const CloseHandler = *const fn (ws: WebSocket, code: i32, message: ?[]const u8) void;
+pub const SubscriptionHandler = *const fn (ws: WebSocket, topic: []const u8, new_sub_num: i32, old_sub_num: i32) void;
 
 // https://github.com/uNetworking/uWebSockets/blob/b9b59b2b164489f3788223fec5821f77f7962d43/src/App.h#L234-L259
 pub const WebSocketBehavior = struct {
@@ -207,9 +207,9 @@ fn upgradeWrapper(handler: UpgradeHandler) fn (
 ) callconv(.c) void {
     return struct {
         fn upgradeHandler(rs: ?*c.uws_res_s, rq: ?*c.uws_req_t, context: ?*c.uws_socket_context_t) callconv(.c) void {
-            var res = Response{ .ptr = rs orelse return };
-            var req = Request{ .ptr = rq orelse return };
-            handler(&res, &req, context);
+            const res = Response{ .ptr = rs orelse return };
+            const req = Request{ .ptr = rq orelse return };
+            handler(res, req, context);
         }
     }.upgradeHandler;
 }
@@ -217,8 +217,8 @@ fn upgradeWrapper(handler: UpgradeHandler) fn (
 fn openWrapper(handler: OpenHandler) fn (raw_ws: ?*c.uws_websocket_t) callconv(.c) void {
     return struct {
         fn openHandler(raw_ws: ?*c.uws_websocket_t) callconv(.c) void {
-            var _ws = WebSocket{ .ptr = raw_ws orelse return };
-            handler(&_ws);
+            const _ws = WebSocket{ .ptr = raw_ws orelse return };
+            handler(_ws);
         }
     }.openHandler;
 }
@@ -231,8 +231,8 @@ fn messageWrapper(handler: MessageHandler) fn (
 ) callconv(.c) void {
     return struct {
         fn messageHandler(raw_ws: ?*c.uws_websocket_t, message: [*c]const u8, length: usize, opcode: c.uws_opcode_t) callconv(.c) void {
-            var _ws = WebSocket{ .ptr = raw_ws orelse return };
-            handler(&_ws, message[0..length], @enumFromInt(opcode));
+            const _ws = WebSocket{ .ptr = raw_ws orelse return };
+            handler(_ws, message[0..length], @enumFromInt(opcode));
         }
     }.messageHandler;
 }
@@ -240,8 +240,8 @@ fn messageWrapper(handler: MessageHandler) fn (
 fn drainWrapper(handler: DrainHandler) fn (raw_ws: ?*c.uws_websocket_t) callconv(.c) void {
     return struct {
         fn drainHandler(raw_ws: ?*c.uws_websocket_t) callconv(.c) void {
-            var _ws = WebSocket{ .ptr = raw_ws orelse return };
-            handler(&_ws);
+            const _ws = WebSocket{ .ptr = raw_ws orelse return };
+            handler(_ws);
         }
     }.drainHandler;
 }
@@ -249,8 +249,8 @@ fn drainWrapper(handler: DrainHandler) fn (raw_ws: ?*c.uws_websocket_t) callconv
 fn pingWrapper(handler: PingPongHandler) fn (raw_ws: ?*c.uws_websocket_t, message: [*c]const u8, length: usize) callconv(.c) void {
     return struct {
         fn pingHandler(raw_ws: ?*c.uws_websocket_t, message: [*c]const u8, length: usize) callconv(.c) void {
-            var _ws = WebSocket{ .ptr = raw_ws orelse return };
-            handler(&_ws, message[0..length]);
+            const _ws = WebSocket{ .ptr = raw_ws orelse return };
+            handler(_ws, message[0..length]);
         }
     }.pingHandler;
 }
@@ -263,8 +263,8 @@ fn closeWrapper(handler: CloseHandler) fn (
 ) callconv(.c) void {
     return struct {
         fn closeHandler(raw_ws: ?*c.uws_websocket_t, code: c_int, message: [*c]const u8, length: usize) callconv(.c) void {
-            var _ws = WebSocket{ .ptr = raw_ws orelse return };
-            handler(&_ws, code, if (length > 0) message[0..length] else null);
+            const _ws = WebSocket{ .ptr = raw_ws orelse return };
+            handler(_ws, code, if (length > 0) message[0..length] else null);
         }
     }.closeHandler;
 }
@@ -284,14 +284,14 @@ fn subscriptionWrapper(handler: SubscriptionHandler) fn (
             new_number_of_subscriber: c_int,
             old_number_of_subscriber: c_int,
         ) callconv(.c) void {
-            var _ws = WebSocket{ .ptr = raw_ws orelse return };
-            handler(&_ws, topic_name[0..topic_name_length], new_number_of_subscriber, old_number_of_subscriber);
+            const _ws = WebSocket{ .ptr = raw_ws orelse return };
+            handler(_ws, topic_name[0..topic_name_length], new_number_of_subscriber, old_number_of_subscriber);
         }
     }.subscriptionHandler;
 }
 
-const WrappedMethodFunction = fn (self: *const App, pattern: [:0]const u8, comptime handler: MethodHandler) *const App;
-const RawMethodFunction = fn (self: *const App, pattern: [:0]const u8, handler: c.uws_method_handler) void;
+const WrappedMethodFunction = fn (self: App, pattern: [:0]const u8, comptime handler: MethodHandler) App;
+const RawMethodFunction = fn (self: App, pattern: [:0]const u8, handler: c.uws_method_handler) void;
 
 fn CreateMethodFn(comptime method: InternalMethod) WrappedMethodFunction {
     return InnerMethodFn(method, true).f;
@@ -317,7 +317,7 @@ fn InnerMethodFn(comptime method: InternalMethod, comptime useWrapper: bool) typ
         const log_str = std.fmt.comptimePrint(if (useWrapper) "Registering {s} route: " else "Registering raw {s} route: ", .{upper_method}) ++ "{s}";
 
         return if (useWrapper) struct {
-            fn f(self: *const App, pattern: [:0]const u8, comptime handler: MethodHandler) *const App {
+            fn f(self: App, pattern: [:0]const u8, comptime handler: MethodHandler) App {
                 if (config.debug_logs) {
                     info(log_str, .{pattern});
                 }
@@ -325,7 +325,7 @@ fn InnerMethodFn(comptime method: InternalMethod, comptime useWrapper: bool) typ
                 return self;
             }
         } else struct {
-            fn f(self: *const App, pattern: [:0]const u8, handler: c.uws_method_handler) void {
+            fn f(self: App, pattern: [:0]const u8, handler: c.uws_method_handler) void {
                 if (config.debug_logs) {
                     info(log_str, .{pattern});
                 }
