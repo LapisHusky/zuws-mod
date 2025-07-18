@@ -444,7 +444,7 @@ void * uws_ws_get_user_data(uws_websocket_t *ws)
 
 #pragma endregion
 
-void uws_loop_defer(us_loop_t *loop, void(cb()))
+void uws_loop_defer(us_loop_t *loop, void (*cb)(void))
 {
     ((uWS::Loop *)loop)->defer([cb]()
                                { cb(); });

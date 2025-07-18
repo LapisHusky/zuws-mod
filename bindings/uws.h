@@ -222,7 +222,7 @@ uws_app_t *uws_create_app();
 
 #pragma endregion
 
-    void uws_loop_defer(struct us_loop_t *loop, void(cb()));
+    void uws_loop_defer(struct us_loop_t *loop, void (*cb)(void));
     struct us_loop_t *uws_get_loop();
     struct us_loop_t *uws_get_loop_with_native(void *existing_native_loop);
 
